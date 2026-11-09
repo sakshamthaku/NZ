@@ -17,7 +17,6 @@ import Notes from "./pages/public/Note";
 import CalendarComponent from "./pages/public/Calendar";
 import Task from "./pages/public/Task";
 import ExploreFuture from "./pages/public/ExploreFuture";
-import AISummary from "./pages/public/AISummary";
 
 import Dashboard from "./pages/admin/Dashboard";
 import AdminLayout from "./layouts/AdminLayout";
@@ -38,6 +37,9 @@ import Mainmenu from "./public shared social/Mainmenu";
 import Usereditor from "./public shared social/Usereditor";
 import Hosteditor from "./public shared social/Hostusereditor";
 import CodePreview from "./pages/public/Code@preview";
+import List from "./pages/public/List";
+import Saved from "./pages/public/Saved";
+import AISummary from "./pages/public/AISummary";
 
 
 
@@ -69,10 +71,12 @@ function App() {
         <Route path="/Planning"  element={<Planning/>} />
        
         <Route path="/join"       element={<Join/>} />
+        <Route path="/list"       element={<List/>} />
         <Route path="/do"        element={<DonationBox/>} />
         <Route path="/connect"  element={<Connect/>}/>
         <Route path="connect"   element={<NoteS/>}/>
         <Route path="/WORKS"    element={<WORKPLACE />} />
+
           {/* AI Summary */}
           <Route path="ai" element={<AISummary />} />
 
@@ -119,6 +123,8 @@ function App() {
         <Route path="/USERINTERFACED" element={<Usereditor/>}/>
         <Route path="/hostenterfaced" element={<Hosteditor/>}/>
         <Route path="/codesee"     element={<CodePreview/>}/>
+        <Route path="/savedlist"   element={<Saved/>}/>
+        <Route path="/AI"          element={<AISummary/>}/>
       </Routes>
       
     </BrowserRouter>

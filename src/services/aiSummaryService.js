@@ -1,192 +1,232 @@
-import { db, auth } from "../firebase/Firebase";
 
-import {
-  collection,
-  getDocs,
-  doc,
-  getDoc,
-  query,
-  orderBy,
-  serverTimestamp,
-  setDoc,
-} from "firebase/firestore";
+const STORAGE_KEY = "notez_intelligence_history";
 
-import { httpsCallable, getFunctions } from "firebase/functions";
+const API_BASE = (
+  import.meta.env.VITE_AI_API_BASE_URL || ""
+).replace(/\/$/, "");
 
-const functions = getFunctions();
+// ==========================================
+// API REQUEST HANDLER
+// ==========================================
 
-export const aiSummaryService = {
-  /**
-   * Send a selected file to the secure Firebase Cloud Function.
-   *
-   * Firebase Storage is NOT used here.
-   */
-  async uploadAndProcessFile(file, mode, onProgress = () => {}) {
-    const user = auth.currentUser;
+async function sendFile(endpoint, fields) {
+  const formData = new FormData();
 
-    if (!user) {
-      throw new Error("User not authenticated.");
+  Object.entries(fields).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+
+    if (value instanceof Blob) {
+      formData.append(key, value);
+    } else if (typeof value === "string") {
+      formData.append(key, value);
+    } else {
+      formData.append(key, JSON.stringify(value));
     }
+  });
 
-    if (!file) {
-      throw new Error("No file selected.");
-    }
+  let response;
 
-    if (!mode) {
-      throw new Error("AI mode is required.");
-    }
-
-    const documentId = doc(
-      collection(db, `users/${user.uid}/aiDocuments`)
-    ).id;
-
-    const fileType =
-      file.type || file.name.split(".").pop()?.toLowerCase() || "";
-
-    /**
-     * Convert the selected file into Base64.
-     * The file is sent directly to the Cloud Function.
-     */
-    const fileData = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-
-      reader.onload = () => {
-        try {
-          const result = reader.result;
-
-          if (typeof result !== "string") {
-            reject(new Error("Could not read the selected file."));
-            return;
-          }
-
-          // Remove the data URL prefix.
-          // Example:
-          // data:application/pdf;base64,AAAA...
-          const base64 = result.includes(",")
-            ? result.split(",")[1]
-            : result;
-
-          resolve(base64);
-        } catch (error) {
-          reject(error);
-        }
-      };
-
-      reader.onerror = () => {
-        reject(new Error("Failed to read the selected file."));
-      };
-
-      reader.readAsDataURL(file);
+  try {
+    response = await fetch(`${API_BASE}${endpoint}`, {
+      method: "POST",
+      body: formData
     });
-
-    // File reading progress.
-    onProgress(50);
-
-    /**
-     * Create Firestore document.
-     */
-    const docRef = doc(
-      db,
-      `users/${user.uid}/aiDocuments`,
-      documentId
+  } catch (error) {
+    throw new Error(
+      "Cannot connect to NoteZ AI backend. Check whether your Python server is running."
     );
+  }
 
-    const docData = {
-      fileName: file.name,
-      fileType,
-      mode,
-      status: "processing",
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      result: null,
-      error: null,
-    };
+  let result;
 
-    await setDoc(docRef, docData);
+  try {
+    result = await response.json();
+  } catch {
+    result = {};
+  }
 
-    onProgress(60);
+  // Show FastAPI's actual error instead of hiding it.
+  if (!response.ok) {
+    const message =
+      result.detail ||
+      result.error ||
+      result.message ||
+      `Server error: ${response.status}`;
 
-    /**
-     * Call Firebase Cloud Function.
-     */
-    const processAI = httpsCallable(
-      functions,
-      "processAISummary"
+    throw new Error(
+      typeof message === "string"
+        ? message
+        : JSON.stringify(message)
     );
+  }
 
-    const response = await processAI({
-      documentId,
-      fileName: file.name,
-      fileType,
-      fileData,
-      mode,
-    });
+  return result;
+}
 
-    onProgress(100);
+// ==========================================
+// DOCUMENT SUMMARY
+// ==========================================
 
-    return {
-      documentId,
-      result: response.data?.result ?? null,
-    };
-  },
+export async function createDocumentSummary(file, mode = "detailed") {
+  if (!file) {
+    throw new Error("Please select a document first.");
+  }
 
-  /**
-   * Get all AI documents belonging to the current user.
-   */
-  async getUserDocuments() {
-    const user = auth.currentUser;
+  return sendFile("/api/ai-summary/summarize", {
+    file,
+    mode
+  });
+}
 
-    if (!user) {
-      return [];
+// ==========================================
+// DOCUMENT AI CHAT
+// ==========================================
+
+export async function askDocumentQuestion({
+  file,
+  question,
+  conversationId,
+  history
+}) {
+  if (!file) {
+    throw new Error("Please upload a document first.");
+  }
+
+  if (!question || !question.trim()) {
+    throw new Error("Please enter your question.");
+  }
+
+  return sendFile("/api/ai-summary/chat", {
+    file,
+    question,
+    conversationId,
+    history
+  });
+}
+
+// ==========================================
+// LOCAL CONVERSATION HISTORY
+// ==========================================
+
+export function getSavedConversations() {
+  try {
+    return JSON.parse(
+      localStorage.getItem(STORAGE_KEY) || "[]"
+    );
+  } catch {
+    return [];
+  }
+}
+
+export function saveConversation(conversation) {
+  const existing = getSavedConversations();
+
+  const index = existing.findIndex(
+    item => item.id === conversation.id
+  );
+
+  if (index >= 0) {
+    existing[index] = conversation;
+  } else {
+    existing.unshift(conversation);
+  }
+
+  existing.sort(
+    (a, b) =>
+      new Date(b.updatedAt || b.createdAt) -
+      new Date(a.updatedAt || a.createdAt)
+  );
+
+  const limited = existing.slice(0, 40);
+
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(limited)
+  );
+
+  return limited;
+}
+
+export function deleteConversation(id) {
+  const updated = getSavedConversations().filter(
+    item => item.id !== id
+  );
+
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(updated)
+  );
+
+  return updated;
+}
+export async function createDocumentSummaryStream(file, mode, onChunk) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("mode", mode);
+
+  const response = await fetch(
+    `${API_BASE}/api/ai-summary/summarize-stream`,
+    {
+      method: "POST",
+      body: formData,
     }
+  );
 
-    const documentsRef = collection(
-      db,
-      `users/${user.uid}/aiDocuments`
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(
+      error.detail || error.error || `Server error: ${response.status}`
     );
+  }
 
-    const q = query(
-      documentsRef,
-      orderBy("createdAt", "desc")
-    );
+  if (!response.body) {
+    throw new Error("Streaming is not supported by this browser.");
+  }
 
-    const snapshot = await getDocs(q);
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let finalSummary = null;
 
-    return snapshot.docs.map((docSnap) => ({
-      id: docSnap.id,
-      ...docSnap.data(),
-    }));
-  },
+  while (true) {
+    const { value, done } = await reader.read();
 
-  /**
-   * Get one AI document belonging to the current user.
-   */
-  async getDocument(documentId) {
-    const user = auth.currentUser;
+    if (done) break;
 
-    if (!user) {
-      throw new Error("Unauthorized");
+    buffer += decoder.decode(value, { stream: true });
+
+    const events = buffer.split("\n\n");
+    buffer = events.pop() || "";
+
+    for (const event of events) {
+      const line = event
+        .split("\n")
+        .find((part) => part.startsWith("data:"));
+
+      if (!line) continue;
+
+      const payload = JSON.parse(line.slice(5).trim());
+
+      if (payload.type === "chunk") {
+        onChunk?.(payload.text || "");
+      }
+
+      if (payload.type === "done") {
+        finalSummary = payload.summary;
+      }
+
+      if (payload.type === "error") {
+        throw new Error(payload.message || "AI streaming failed.");
+      }
     }
+  }
 
-    if (!documentId) {
-      throw new Error("Document ID is required.");
-    }
+  if (!finalSummary) {
+    throw new Error("The AI stream ended before the summary was completed.");
+  }
 
-    const docRef = doc(
-      db,
-      `users/${user.uid}/aiDocuments`,
-      documentId
-    );
-
-    const snap = await getDoc(docRef);
-
-    if (!snap.exists()) {
-      throw new Error("Document not found.");
-    }
-
-    return {
-      id: snap.id,
-      ...snap.data(),
-    };
-  },
-};
+  return {
+    success: true,
+    summary: finalSummary,
+  };
+}

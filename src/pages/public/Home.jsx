@@ -1311,7 +1311,7 @@ function Home() {
         </section>
 
         <div className="notez-features-grid">
-          <Link to="/ai" className="notez-feature-card">
+          <Link to="/AI" className="notez-feature-card">
             <FaBrain className="notez-feature-icon" />
             <h3>AI Summary</h3>
             <p>Turn your documents and images into clear summaries and mind maps.</p>
@@ -1353,6 +1353,12 @@ function Home() {
             <FaCalendarAlt className="notez-feature-icon" />
             <h3>WORK-SPACE</h3>
             <p>For your make workflow simple.</p>
+          </Link>
+
+           <Link to="/list" className="notez-feature-card">
+            <FaCalendarAlt className="notez-feature-icon" />
+            <h3>LIST</h3>
+            <p>this is for list </p>
           </Link>
 
 
