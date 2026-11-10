@@ -5,21 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#ffffff" />
     <title>NoteZ</title>
-    <link rel="icon" type="image/png" href="%BASE_URL%favicon.png" />
+    <link rel="icon" type="image/png" href="%BASE_URL%favicon.png.png" />
+
     <script>
-      // GitHub Pages SPA fallback: restore the requested route after 404.html redirects here.
-      (function (location) {
-        var params = new URLSearchParams(location.search);
-        var route = params.get('p');
-        if (route) {
-          params.delete('p');
-          var query = params.toString();
-          var restored = location.pathname.replace(/\\/$/, '') + '/' + route.replace(/^\\//, '');
-          window.history.replaceState(null, '', restored + (query ? '?' + query : '') + location.hash);
+      // Restore a deep link redirected by GitHub Pages' 404.html fallback.
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var route = params.get("p");
+
+        if (!route) return;
+
+        var originalQuery = params.get("q") || "";
+        params.delete("p");
+        params.delete("q");
+
+        var remainingQuery = params.toString();
+        var finalQuery = originalQuery || remainingQuery;
+
+        var path = window.location.pathname;
+        while (path.length > 1 && path.charAt(path.length - 1) === "/") {
+          path = path.slice(0, -1);
         }
-      })(window.location);
+
+        var restoredPath = path + "/" + route;
+        window.history.replaceState(
+          null,
+          "",
+          restoredPath +
+            (finalQuery ? "?" + finalQuery : "") +
+            window.location.hash
+        );
+      })();
     </script>
   </head>
+
   <body>
     <div id="root"></div>
     <script type="module" src="%BASE_URL%src/main.jsx"></script>
