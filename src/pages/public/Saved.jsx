@@ -249,7 +249,7 @@ export default function Saved() {
           Sign in to your NoteZ account to access your saved lists
           and cloud dashboard.
         </p>
-        <a href="/NZ/" className="saved-login-btn">
+        <a href={import.meta.env.BASE_URL} className="saved-login-btn">
           Go to NoteZ
         </a>
       </div>
