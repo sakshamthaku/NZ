@@ -8,6 +8,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <title>NoteZ</title>
+    <script>
+      // Restore GitHub Pages deep links before the NoteZ app bundle starts.
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var route = params.get("p");
+        if (!route) return;
+
+        var originalQuery = params.get("q") || "";
+        params.delete("p");
+        params.delete("q");
+
+        var remainingQuery = params.toString();
+        var finalQuery = originalQuery || remainingQuery;
+        var path = window.location.pathname;
+
+        while (path.length > 1 && path.charAt(path.length - 1) === "/") {
+          path = path.slice(0, -1);
+        }
+
+        window.history.replaceState(
+          null,
+          "",
+          path + "/" + route +
+            (finalQuery ? "?" + finalQuery : "") +
+            window.location.hash
+        );
+      })();
+    </script>
+
     <script type="module" crossorigin src="/NZ/assets/index-DuGfaThF.js"></script>
     <link rel="stylesheet" crossorigin href="/NZ/assets/index-DhMbGZSz.css">
   </head>
