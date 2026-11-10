@@ -1,13 +1,23 @@
+// GitHub Pages fallback for the NoteZ single-page React application.
 (function () {
-  var base = '/NZ/';
+  var base = "/NZ/";
   var pathname = window.location.pathname;
-  var route = pathname.indexOf(base) === 0
-    ? pathname.slice(base.length)
-    : pathname.replace(/^\\//, '');
+  var route = "";
 
-  var redirect = base + '?p=' + encodeURIComponent(route) +
-    (window.location.search ? '&' + window.location.search.slice(1) : '') +
-    window.location.hash;
+  if (pathname.indexOf(base) === 0) {
+    route = pathname.slice(base.length);
+  } else {
+    route = pathname.split("/").filter(Boolean).join("/");
+  }
 
-  window.location.replace(redirect);
+  var params = new URLSearchParams();
+  params.set("p", route);
+
+  if (window.location.search.length > 1) {
+    params.set("q", window.location.search.slice(1));
+  }
+
+  window.location.replace(
+    base + "?" + params.toString() + window.location.hash
+  );
 })();
