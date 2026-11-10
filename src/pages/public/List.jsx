@@ -1004,7 +1004,8 @@ export default function List() {
           <button
             className="nl-saved-page-btn"
             onClick={() => {
-              window.location.href = "/savedlist";
+              // Keep navigation under the GitHub Pages project base (/NZ/).
+              window.location.href = `${import.meta.env.BASE_URL}savedlist`;
             }}
           >
             ⭐ Saved Lists Page
