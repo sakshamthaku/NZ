@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { auth, db } from "../../firebase/Firebase";
 
 import { onAuthStateChanged } from "firebase/auth";
@@ -100,6 +101,7 @@ function readLocalLists() {
 }
 
 export default function List() {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [savedLists, setSavedLists] = useState(readLocalLists);
   const [currentList, setCurrentList] = useState(() => createList("shopping"));
@@ -1003,10 +1005,7 @@ export default function List() {
 
           <button
             className="nl-saved-page-btn"
-            onClick={() => {
-              // Keep navigation under the GitHub Pages project base (/NZ/).
-              window.location.href = `${import.meta.env.BASE_URL}savedlist`;
-            }}
+            onClick={() => navigate("/savedlist")}
           >
             ⭐ Saved Lists Page
           </button>
