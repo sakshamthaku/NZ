@@ -1,0 +1,13 @@
+(function () {
+  var base = '/NZ/';
+  var pathname = window.location.pathname;
+  var route = pathname.indexOf(base) === 0
+    ? pathname.slice(base.length)
+    : pathname.replace(/^\\//, '');
+
+  var redirect = base + '?p=' + encodeURIComponent(route) +
+    (window.location.search ? '&' + window.location.search.slice(1) : '') +
+    window.location.hash;
+
+  window.location.replace(redirect);
+})();
